@@ -213,18 +213,22 @@ function updateUI() {
 
     // 画面に指が触れた瞬間、または動いている時の共通処理
     const handleTouch = (e) => {
-        // e.preventDefault() を呼ぶことで、この後に走る不要な「click」イベントをブロック
-        if (e.cancelable) {
-            e.preventDefault();
-        }
-        
         // タッチされた位置の座標（1本目の指）を取得
         const touch = e.touches[0];
         // その座標にあるHTML要素をピンポイントで特定
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
         if (!element) return;
 
-        // 見つかった要素、またはその親要素から「koto-string-row（弦の行）」を探す
+        // 調弦ボタン（tune-btn）でタッチ制御をすべてスルーして、通常のボタンクリック動作を最優先させる
+        if (element.classList.contains('tune-btn') || element.closest('.tune-btn')) {
+            return; 
+        }
+
+        // 弦のエリア（center-playable）で二重発音防止を効かせる
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+        
         const row = element.closest('.koto-string-row');
         if (row) {
             const currentIndex = parseInt(row.dataset.index, 10);
