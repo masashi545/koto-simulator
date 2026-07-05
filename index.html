@@ -54,9 +54,13 @@
     <!-- プリセットと便利機能 -->
     <div class="preset-section">
         <h3>🎵 調子選択 / 演奏</h3>
-        <button class="preset-btn" onclick="applyPreset('hira')">平調子 (ひら)</button>
-        <button class="preset-btn" onclick="applyPreset('akuruhi_1')">翊 (あくるひ) 箏Ⅰ</button>
-        <button class="preset-btn" onclick="applyPreset('akuruhi_2')">翊 (あくるひ) 箏Ⅱ</button>
+        <button class="preset-btn" onclick="applyPreset('hira')">平調子</button>
+        <button class="preset-btn" onclick="applyPreset('nogi')">乃木調子</button>
+        <button class="preset-btn" onclick="applyPreset('kumoi')">雲井調子</button>
+        <button class="preset-btn" onclick="applyPreset('hkumoi')">半雲井調子</button>
+        <button class="preset-btn" onclick="applyPreset('gaku')">楽調子</button>
+        <button class="preset-btn" onclick="applyPreset('akuruhi_1')">翊 箏Ⅰ</button>
+        <button class="preset-btn" onclick="applyPreset('akuruhi_2')">翊 箏Ⅱ</button>
         <button class="preset-btn gliss-btn" onclick="playGlissando()">連爪 (グリッサンド)</button>
     </div>
 
@@ -76,6 +80,10 @@ const strings = [
 
 const presets = {
     hira:  ["D3", "G3", "A3", "Bb3", "D4", "Eb4", "G4", "A4", "Bb4", "D5", "Eb5", "G5", "A5"],
+    nogi:  ["D3", "G3", "A3", "B3",  "D4", "E4",  "G4", "A4", "B4",  "D5", "E5",  "G5", "A5"],
+    kumoi: ["D3", "G3", "Ab3","C4",  "D4", "Eb4", "G4", "Ab4","C5",  "D5", "Eb5", "G5", "Ab5"],
+    hkumoi:["D3", "G3", "A3", "C4",  "D4", "Eb4", "G4", "A4", "C5",  "D5", "Eb5", "G5", "A5"],
+    gaku:  ["D3", "G3", "A3", "C4",  "D4", "E4",  "G4", "A4", "C5",  "D5", "E5",  "G5", "A5"],
     akuruhi_1: ["Bb3", "C4", "D4", "Eb4", "G4", "Bb4", "C5", "D5", "Eb5", "F5", "G5", "Ab5", "Bb5"],
     akuruhi_2: ["G3",  "Bb3","C4", "D4",  "E4", "F4",  "G4", "Bb4","C5",  "D5", "Eb5","F5",  "G5"]
 };
