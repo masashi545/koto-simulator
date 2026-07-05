@@ -219,41 +219,49 @@ function updateUI() {
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
         if (!element) return;
 
-        // 調弦ボタン（tune-btn）でタッチ制御をすべてスルーして、通常のボタンクリック動作を最優先させる
-        if (element.classList.contains('tune-btn') || element.closest('.tune-btn')) {
-            return; 
-        }
-
-        // 弦のエリア（center-playable）で二重発音防止を効かせる
-        if (e.cancelable) {
-            e.preventDefault();
-        }
-        
-        const row = element.closest('.koto-string-row');
-        if (row) {
-            const currentIndex = parseInt(row.dataset.index, 10);
-            // 直前に鳴らした弦と同じ弦なら連続で鳴らさない
-            if (currentIndex !== lastPlayedIndex) {
-                playTone(strings[currentIndex].hz, 0, currentIndex);
-                lastPlayedIndex = currentIndex;
+        // 触っている要素が center-playable である場合のみ処理を続行
+        if (element.classList.contains('center-playable') || element.closest('.center-playable')) {
+            // 弦エリアでの不要なスクロールや二重クリックを防止
+            if (e.cancelable) {
+                e.preventDefault(); 
             }
+            
+            const row = element.closest('.koto-string-row');
+            if (row) {
+                const currentIndex = parseInt(row.dataset.index, 10);
+                // 直前に鳴らした弦と同じ弦なら連続で鳴らさない
+                if (currentIndex !== lastPlayedIndex) {
+                    playTone(strings[currentIndex].hz, 0, currentIndex);
+                    lastPlayedIndex = currentIndex;
+                }
+            }
+        } else {
+            // center-playable 以外の場合は、スライド音を鳴らさないようにリセット
+            lastPlayedIndex = null;
         }
     };
 
-    // 箏の本体エリア（board）にタッチイベントを登録
+    // タッチ開始時
     board.addEventListener('touchstart', (e) => {
-        lastPlayedIndex = null; // タッチ開始時にリセット
+        const touch = e.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        // 最初に触った場所がボタンの場合は、一切タッチ処理を邪魔しない（ボタンを生かす）
+        if (element && (element.classList.contains('tune-btn') || element.closest('.tune-btn'))) {
+            return; 
+        }
+
+        lastPlayedIndex = null; 
         handleTouch(e);
     }, { passive: false });
 
+    // スライド中
     board.addEventListener('touchmove', (e) => {
         handleTouch(e);
     }, { passive: false });
 
+    // 指を離した時
     board.addEventListener('touchend', (e) => {
-        if (e.cancelable) {
-            e.preventDefault();
-        }
         lastPlayedIndex = null; 
     }, { passive: false });
 }
