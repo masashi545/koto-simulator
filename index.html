@@ -50,19 +50,28 @@
 <body>
 
     <h1>箏 調弦シミュレーター</h1>
-    <p class="desc">弦を押すと音が鳴ります</p>
+    <p class="desc">弦を押すと音が鳴ります。◀ ▶ で半音ずつ音階を変更できます。</p>
 
     <!-- プリセットと便利機能 -->
     <div class="preset-section">
-        <h3>🎵 調子選択 / 演奏</h3>
-        <button class="preset-btn" onclick="applyPreset('hira')">平調子</button>
-        <button class="preset-btn" onclick="applyPreset('nogi')">乃木調子</button>
-        <button class="preset-btn" onclick="applyPreset('kumoi')">雲井調子</button>
-        <button class="preset-btn" onclick="applyPreset('hkumoi')">半雲井調子</button>
-        <button class="preset-btn" onclick="applyPreset('gaku')">楽調子</button>
-        <button class="preset-btn" onclick="applyPreset('akuruhi_1')">翊 箏Ⅰ</button>
-        <button class="preset-btn" onclick="applyPreset('akuruhi_2')">翊 箏Ⅱ</button>
-        <button class="preset-btn gliss-btn" onclick="playGlissando()">連爪 (グリッサンド)</button>
+        <h3>調子選択</h3>
+        <div style="margin-bottom: 12px;">
+            <button class="preset-btn" onclick="applyPreset('hira')">平調子</button>
+            <!-- <button class="preset-btn" onclick="applyPreset('nogi')">乃木調子</button> -->
+            <!-- <button class="preset-btn" onclick="applyPreset('kumoi')">雲井調子</button> -->
+            <!-- <button class="preset-btn" onclick="applyPreset('hkumoi')">半雲井調子</button> -->
+            <!-- <button class="preset-btn" onclick="applyPreset('gaku')">楽調子</button> -->
+            <button class="preset-btn" onclick="applyPreset('akuruhi_1')">翊 箏Ⅰ</button>
+            <button class="preset-btn" onclick="applyPreset('akuruhi_2')">翊 箏Ⅱ</button>
+            <button class="preset-btn" onclick="applyPreset('kuon')">久遠</button>
+            <button class="preset-btn" onclick="applyPreset('tenkyu_solo')">天泣 独奏</button>
+            <button class="preset-btn" onclick="applyPreset('tenkyu_1')">天泣 箏Ⅰ</button>
+            <button class="preset-btn" onclick="applyPreset('tenkyu_2')">天泣 箏Ⅱ</button>
+        </div>
+        <div>
+            <button class="preset-btn gliss-btn" onclick="playGlissando()">連爪 (グリッサンド)</button>
+            <button class="preset-btn" id="lock-btn" style="background: #00a329;" onclick="toggleScrollLock()">🔓 画面を固定（タブレット）</button>
+        </div>
     </div>
 
     <!-- 箏本体 -->
@@ -86,7 +95,11 @@ const presets = {
     hkumoi:["D3", "G3", "A3", "C4",  "D4", "Eb4", "G4", "A4", "C5",  "D5", "Eb5", "G5", "A5"],
     gaku:  ["D3", "G3", "A3", "C4",  "D4", "E4",  "G4", "A4", "C5",  "D5", "E5",  "G5", "A5"],
     akuruhi_1: ["Bb3", "C4", "D4", "Eb4", "G4", "Bb4", "C5", "D5", "Eb5", "F5", "G5", "Ab5", "Bb5"],
-    akuruhi_2: ["G3",  "Bb3","C4", "D4",  "E4", "F4",  "G4", "Bb4","C5",  "D5", "Eb5","F5",  "G5"]
+    akuruhi_2: ["G3",  "Bb3","C4", "D4",  "E4", "F4",  "G4", "Bb4","C5",  "D5", "Eb5","F5",  "G5"],
+    kuon: ["D3", "G3", "Bb3", "C4", "D4", "Eb4", "G4", "Bb4", "C4", "D5", "Eb5", "G5", "Bb5"],
+    tenkyu_solo: ["B3", "C4", "E4", "G4", "A4", "B4", "D5", "E5", "Gb5", "G5", "A5", "B5", "D6"],
+    tenkyu_1:    ["A3", "B3", "D4", "E4", "Gb4", "G4", "A4", "B4", "D5", "E5", "Gb5", "G5", "A5"],
+    tenkyu_2:    ["E3", "Gb3", "G3", "A3", "B3", "D4", "E4", "Gb4", "G4", "A4", "B4", "D5", "E5"],
 };
 
 const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
@@ -178,6 +191,7 @@ function updateUI() {
     strings.forEach((str, index) => {
         const row = document.createElement('div');
         row.className = 'koto-string-row';
+        row.dataset.index = index;
         const currentNoteNum = hzToNoteNum(str.hz);
         
         row.innerHTML = `
@@ -195,6 +209,42 @@ function updateUI() {
         `;
         board.appendChild(row);
     });
+
+    let lastPlayedIndex = null;
+
+    // 画面に指が触れた瞬間、または動いている時の共通処理
+    const handleTouch = (e) => {
+        // タッチされた位置の座標（1本目の指）を取得
+        const touch = e.touches[0];
+        // その座標にあるHTML要素をピンポイントで特定
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (!element) return;
+
+        // 見つかった要素、またはその親要素から「koto-string-row（弦の行）」を探す
+        const row = element.closest('.koto-string-row');
+        if (row) {
+            const currentIndex = parseInt(row.dataset.index, 10);
+            // 直前に鳴らした弦と同じ弦なら連続で鳴らさない
+            if (currentIndex !== lastPlayedIndex) {
+                playTone(strings[currentIndex].hz, 0, currentIndex);
+                lastPlayedIndex = currentIndex;
+            }
+        }
+    };
+
+    // 箏の本体エリア（board）にタッチイベントを登録
+    board.addEventListener('touchstart', (e) => {
+        lastPlayedIndex = null; // タッチ開始時にリセット
+        handleTouch(e);
+    }, { passive: true });
+
+    board.addEventListener('touchmove', (e) => {
+        handleTouch(e);
+    }, { passive: true });
+
+    board.addEventListener('touchend', () => {
+        lastPlayedIndex = null; // 指が離れたらリセット
+    });
 }
 
 // 1音階（半音）の変更
@@ -205,6 +255,36 @@ function tune(index, direction) {
     
     document.getElementById(`hz-${index}`).innerText = Math.round(strings[index].hz) + "Hz";
     document.getElementById(`note-${index}`).innerText = getNoteLabel(currentNoteNum);
+}
+
+// 画面スクロールをロック・解除する関数
+let isScrollLocked = false;
+
+// タッチによるスクロールの動きを強制キャンセルするリスナー
+function preventDefaultTouch(e) {
+    e.preventDefault();
+}
+
+function toggleScrollLock() {
+    const lockBtn = document.getElementById('lock-btn');
+    isScrollLocked = !isScrollLocked;
+
+    if (isScrollLocked) {
+        // 1. 画面の一番下まで自動スクロールさせる
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        
+        // 2. タッチによるスクロール（スクロール動作）を禁止にする
+        document.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+        
+        // 3. ボタンの見た目を更新
+        lockBtn.innerText = "🔒 固定を解除（タブレット）";
+        lockBtn.style.background = "#a30000"; 
+    } else {
+        // 固定を解除
+        document.removeEventListener('touchmove', preventDefaultTouch);
+        lockBtn.innerText = "🔓 画面を固定（タブレット）";
+        lockBtn.style.background = "#00a329";
+    }
 }
 
 // 初期化
