@@ -69,7 +69,6 @@
             <button class="preset-btn" onclick="applyPreset('tenkyu_2')">天泣 箏Ⅱ</button>
         </div>
         <div>
-            <button class="preset-btn gliss-btn" onclick="playGlissando()">連爪 (グリッサンド)</button>
             <button class="preset-btn" id="lock-btn" style="background: #00a329;" onclick="toggleScrollLock()">🔓 画面を固定（タブレット）</button>
         </div>
     </div>
@@ -214,6 +213,11 @@ function updateUI() {
 
     // 画面に指が触れた瞬間、または動いている時の共通処理
     const handleTouch = (e) => {
+        // e.preventDefault() を呼ぶことで、この後に走る不要な「click」イベントをブロック
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+        
         // タッチされた位置の座標（1本目の指）を取得
         const touch = e.touches[0];
         // その座標にあるHTML要素をピンポイントで特定
@@ -236,15 +240,18 @@ function updateUI() {
     board.addEventListener('touchstart', (e) => {
         lastPlayedIndex = null; // タッチ開始時にリセット
         handleTouch(e);
-    }, { passive: true });
+    }, { passive: false });
 
     board.addEventListener('touchmove', (e) => {
         handleTouch(e);
-    }, { passive: true });
+    }, { passive: false });
 
-    board.addEventListener('touchend', () => {
-        lastPlayedIndex = null; // 指が離れたらリセット
-    });
+    board.addEventListener('touchend', (e) => {
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+        lastPlayedIndex = null; 
+    }, { passive: false });
 }
 
 // 1音階（半音）の変更
@@ -278,7 +285,7 @@ function toggleScrollLock() {
         
         // 3. ボタンの見た目を更新
         lockBtn.innerText = "🔒 固定を解除（タブレット）";
-        lockBtn.style.background = "#a30000"; 
+        lockBtn.style.background = "#d97706"; 
     } else {
         // 固定を解除
         document.removeEventListener('touchmove', preventDefaultTouch);
