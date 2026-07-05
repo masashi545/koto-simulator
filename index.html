@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>箏 調弦シミュレーター</title>
+    <style>
+        body { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; background: #fdfaf2; color: #4a3728; padding: 20px; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        h1 { margin-bottom: 5px; color: #8c2d19; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .desc { margin-bottom: 20px; font-size: 0.9em; color: #666; }
+        
+        /* プリセットエリア */
+        .preset-section { background: #f3ece0; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #d9cdb8; text-align: center; width: 100%; max-width: 800px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .preset-section h3 { margin: 0 0 10px 0; font-size: 1.1em; }
+        .preset-btn { background: #8c2d19; color: white; border: none; padding: 8px 18px; margin: 0 5px 5px 5px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s; font-family: inherit; }
+        .preset-btn:hover { background: #b83b20; }
+        .gliss-btn { background: #d97706; }
+        .gliss-btn:hover { background: #f59e0b; }
+
+        /* 箏の本体（上から一、下へ巾へと並ぶ） */
+        .koto-container { display: flex; flex-direction: column; background: #e6b47b; background-image: linear-gradient(to right, #dca263, #e6b47b, #dca263); padding: 20px 30px; border-radius: 12px; box-shadow: inset 0 0 20px rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.15); border: 4px solid #b57c3f; width: 100%; max-width: 800px; box-sizing: border-box; }
+
+        /* 各弦の行（横長） */
+        .koto-string-row { display: flex; flex-direction: row; align-items: center; height: 45px; position: relative; margin: 2px 0; }
+        
+        /* 横に走る糸の線 */
+        .koto-string-row::before { content: ""; position: absolute; left: 60px; right: 40px; height: 3px; background: #fffbe6; box-shadow: 0 1px 3px rgba(0,0,0,0.3); z-index: 1; pointer-events: none; transition: background 1.5s ease-out; }
+ 
+        /* 弾いた弦が赤くなるエフェクト */
+        .koto-string-row.active::before {
+            background: #e63946; /* 鮮やかな赤色 */
+            transition: none;
+        }
+
+        /* 左側：音階エリア */
+        .left-controls { width: 120px; display: flex; align-items: center; z-index: 2; }
+        .note-display { font-size: 1.1em; font-weight: bold; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; width: 40px; text-align: center; padding: 4px 0; margin-right: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tune-btn { width: 28px; height: 28px; font-size: 0.8em; padding: 0; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 3px; font-weight: bold; margin: 0 2px; display: flex; align-items: center; justify-content: center; }
+        .tune-btn:hover { background: #f3ece0; }
+
+        /* 中央：弦（糸）の演奏エリア */
+        .center-playable { flex-grow: 1; height: 100%; z-index: 3; cursor: pointer; position: relative; }
+        .center-playable:active { opacity: 0.7; }
+
+        /* 右側：糸番号エリア */
+        .right-controls { width: 40px; text-align: center; z-index: 2; }
+        .string-name { font-size: 1.2em; font-weight: bold; background: rgba(255,255,255,0.8); padding: 4px 8px; border-radius: 4px; display: inline-block; min-width: 24px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h1>箏 調弦シミュレーター</h1>
+    <p class="desc">弦を押すと音が鳴ります</p>
+
+    <!-- プリセットと便利機能 -->
+    <div class="preset-section">
+        <h3>🎵 調子選択 / 演奏</h3>
+        <button class="preset-btn" onclick="applyPreset('hira')">平調子 (ひら)</button>
+        <button class="preset-btn" onclick="applyPreset('akuruhi_1')">翊 (あくるひ) 箏Ⅰ</button>
+        <button class="preset-btn" onclick="applyPreset('akuruhi_2')">翊 (あくるひ) 箏Ⅱ</button>
+        <button class="preset-btn gliss-btn" onclick="playGlissando()">連爪 (グリッサンド)</button>
+    </div>
+
+    <!-- 箏本体 -->
+    <div class="koto-container" id="koto-board"></div>
+
+<script>
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
+// 13本の弦データ
+const strings = [
+    { name: "一", hz: 0 }, { name: "二", hz: 0 }, { name: "三", hz: 0 }, { name: "四", hz: 0 }, { name: "五", hz: 0 },
+    { name: "六", hz: 0 }, { name: "七", hz: 0 }, { name: "八", hz: 0 }, { name: "九", hz: 0 }, { name: "十", hz: 0 },
+    { name: "斗", hz: 0 }, { name: "為", hz: 0 }, { name: "巾", hz: 0 }
+];
+
+const presets = {
+    hira:  ["D3", "G3", "A3", "Bb3", "D4", "Eb4", "G4", "A4", "Bb4", "D5", "Eb5", "G5", "A5"],
+    akuruhi_1: ["Bb3", "C4", "D4", "Eb4", "G4", "Bb4", "C5", "D5", "Eb5", "F5", "G5", "Ab5", "Bb5"],
+    akuruhi_2: ["G3",  "Bb3","C4", "D4",  "E4", "F4",  "G4", "Bb4","C5",  "D5", "Eb5","F5",  "G5"]
+};
+
+const NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+
+function hzToNoteNum(hz) {
+    if (!hz || hz <= 0) return 60;
+    return Math.round(12 * Math.log2(hz / 440) + 69);
+}
+
+function noteNumToHz(noteNum) {
+    return 440 * Math.pow(2, (noteNum - 69) / 12);
+}
+
+function getNoteLabel(noteNum) {
+    const nameIndex = (noteNum % 12 + 12) % 12;
+    return NOTE_NAMES[nameIndex];
+}
+
+function noteNameToHz(noteName) {
+    const match = noteName.match(/^([A-G]b?)(\d+)$/);
+    if (!match) return 440;
+    const name = match[1];
+    const octave = parseInt(match[2], 10);
+    const nameIndex = NOTE_NAMES.indexOf(name);
+    const noteNum = (octave + 1) * 12 + nameIndex;
+    return noteNumToHz(noteNum);
+}
+
+// 減衰音の再生
+function playTone(hz, delay = 0, index = null) {
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    
+    // indexが指定されている場合、対象の弦を赤くする
+    if (index !== null) {
+        setTimeout(() => {
+            const rows = document.querySelectorAll('.koto-string-row');
+            if (rows[index]) {
+                // 1. まず赤色クラスを付与する
+                rows[index].classList.add('active');
+                
+                // 2. 音の減衰（1.5秒後）に合わせて赤色クラスを外す
+                setTimeout(() => {
+                    rows[index].classList.remove('active');
+                }, 200);
+            }
+        }, delay * 1000);
+    }
+    
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    osc.type = 'triangle'; 
+    osc.frequency.setValueAtTime(hz, audioCtx.currentTime + delay);
+    
+    // 箏らしいアタックと長い余韻の表現
+    gainNode.gain.setValueAtTime(0.0, audioCtx.currentTime + delay);
+    gainNode.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + delay + 0.02);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 1.8);
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + 1.8);
+}
+
+// グリッサンド（一から巾まで連続で弾く）
+function playGlissando() {
+    strings.forEach((str, index) => {
+        playTone(str.hz, index * 0.08); // 0.08秒ズラして順に再生
+    });
+}
+
+function applyPreset(presetKey) {
+    const selectedNotes = presets[presetKey];
+    strings.forEach((str, index) => {
+        str.hz = noteNameToHz(selectedNotes[index]); 
+    });
+    updateUI();
+}
+
+// UIの構築（上から一、下へ巾。左に音階、右に糸番号）
+function updateUI() {
+    const board = document.getElementById('koto-board');
+    board.innerHTML = ''; 
+    
+    strings.forEach((str, index) => {
+        const row = document.createElement('div');
+        row.className = 'koto-string-row';
+        const currentNoteNum = hzToNoteNum(str.hz);
+        
+        row.innerHTML = `
+            <div class="left-controls">
+                <span class="note-display" id="note-${index}">${getNoteLabel(currentNoteNum)}</span>
+                <button class="tune-btn" onclick="tune(${index}, -1)">◀</button>
+                <button class="tune-btn" onclick="tune(${index}, 1)">▶</button>
+            </div>
+            <div class="center-playable" onclick="playTone(strings[${index}].hz, 0, ${index})">
+                <span class="hz-text" id="hz-${index}">${Math.round(str.hz)}Hz</span>
+            </div>
+            <div class="right-controls">
+                <span class="string-name">${str.name}</span>
+            </div>
+        `;
+        board.appendChild(row);
+    });
+}
+
+// 1音階（半音）の変更
+function tune(index, direction) {
+    let currentNoteNum = hzToNoteNum(strings[index].hz);
+    currentNoteNum += direction;
+    strings[index].hz = noteNumToHz(currentNoteNum);
+    
+    document.getElementById(`hz-${index}`).innerText = Math.round(strings[index].hz) + "Hz";
+    document.getElementById(`note-${index}`).innerText = getNoteLabel(currentNoteNum);
+}
+
+// 初期化
+applyPreset('hira');
+</script>
+</body>
+</html>
