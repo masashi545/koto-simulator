@@ -32,12 +32,13 @@
         }
 
         /* 左側：音階エリア */
-        .left-controls { width: 120px; display: flex; align-items: center; z-index: 2; }
+        .left-controls { width: 140px; display: flex; align-items: center; z-index: 2; }
         .note-display { font-size: 1.1em; font-weight: bold; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; width: 40px; text-align: center; padding: 4px 0; margin-right: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .tune-btn { width: 28px; height: 28px; font-size: 0.8em; padding: 0; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 3px; font-weight: bold; margin: 0 2px; display: flex; align-items: center; justify-content: center; }
+        .tune-btn { width: 36px; height: 36px; font-size: 1.2em; padding: 0; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 3px; font-weight: bold; margin: 0 2px; display: flex; align-items: center; justify-content: center; }
         .tune-btn:hover { background: #f3ece0; }
 
         /* 中央：弦（糸）の演奏エリア */
+        .hz-text { width: 12px; height: 5px; font-size: 0.7em; color: #554433; background: #fff; padding: 1px 4px; border-radius: 3px; pointer-events: none; line-height: 1; font-weight: bold; }
         .center-playable { flex-grow: 1; height: 100%; z-index: 3; cursor: pointer; position: relative; }
         .center-playable:active { opacity: 0.7; }
 
